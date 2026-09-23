@@ -1,0 +1,33 @@
+{
+  "name": "dblearn",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "node scripts/copy-duckdb-assets.mjs && next dev",
+    "build": "node scripts/copy-duckdb-assets.mjs && next build",
+    "start": "node scripts/copy-duckdb-assets.mjs && next start",
+    "lint": "eslint",
+    "check:e2e": "node scripts/e2e.mjs"
+  },
+  "dependencies": {
+    "@dagrejs/dagre": "^1.1.8",
+    "@duckdb/duckdb-wasm": "^1.32.0",
+    "@monaco-editor/react": "^4.7.0",
+    "@xyflow/react": "^12.11.6",
+    "monaco-editor": "^0.56.0",
+    "next": "16.3.5",
+    "react": "19.2.8",
+    "react-dom": "19.2.8"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4",
+    "@types/node": "^20",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9",
+    "eslint-config-next": "16.3.5",
+    "playwright-core": "^1.63.0",
+    "tailwindcss": "^4",
+    "typescript": "^5"
+  }
+}

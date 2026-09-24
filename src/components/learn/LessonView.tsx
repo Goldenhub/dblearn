@@ -7,7 +7,7 @@
  * store; capstone lessons complete when the matching challenge is solved.
  */
 
-import { useMemo, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
 import {
@@ -16,6 +16,12 @@ import {
   lessonFor,
   type LessonBlock,
 } from "@/lib/lessons/curriculum";
+import {
+  courseCompleted,
+  lessonCompleted as trackLessonCompleted,
+  lessonStarted,
+  unitCompleted,
+} from "@/lib/dblearnlytics";
 import { challengeFor } from "@/lib/challenges/catalog";
 import {
   gradeTask,
@@ -28,7 +34,9 @@ import { analysisToSegments } from "@/lib/lessons/queryAnalyzer";
 import type { EvictionPolicy } from "@/lib/engine/challengeEngine";
 import type { IsolationLevel } from "@/lib/engine/concurrency";
 import {
+  getProgress,
   lessonCompleted,
+  lessonsForUnit,
   recordLesson,
   useProgress,
 } from "@/lib/store/useProgressStore";
@@ -215,7 +223,7 @@ function fmtNum(n: number): string {
   return new Intl.NumberFormat("en-US").format(n);
 }
 
-function TaskRunner({ task, onPassed }: { task: LessonTask; onPassed: (grade: 1 | 2) => void }) {
+function TaskRunner({ task, onPassed }: { task: LessonTask; onPassed: (grade: 1 | 2, attempts: number) => void }) {
   const [attempt, setAttempt] = useState(0);
   const [selected, setSelected] = useState<string | null>(null);
   const [result, setResult] = useState<TaskResult | null>(null);
@@ -227,7 +235,7 @@ function TaskRunner({ task, onPassed }: { task: LessonTask; onPassed: (grade: 1 
     setResult(r);
     if (r.passed && !solved) {
       setSolved(true);
-      onPassed(attempt === 0 ? 2 : 1);
+      onPassed(attempt === 0 ? 2 : 1, attempt + 1);
     }
   };
 
@@ -503,6 +511,10 @@ export default function LessonView({ lessonId }: { lessonId: string }) {
   const router = useRouter();
   const [justCompleted, setJustCompleted] = useState(false);
 
+  useEffect(() => {
+    if (loc) lessonStarted(loc.lesson.id, loc.lesson.title, loc.unit.title);
+  }, [loc]);
+
   if (!loc) {
     return (
       <div className="flex min-h-0 flex-1 items-center justify-center text-zinc-500">
@@ -578,9 +590,23 @@ export default function LessonView({ lessonId }: { lessonId: string }) {
                   <TaskRunner
                     key={bi}
                     task={block.task}
-                    onPassed={(grade) => {
+                    onPassed={(grade, attempts) => {
+                      const before = getProgress();
                       recordLesson(lesson.id, { completedAt: Date.now(), grade });
                       setJustCompleted(true);
+                      trackLessonCompleted(lesson.id, grade, attempts);
+                      const after = getProgress();
+                      const unitDone = lessonsForUnit(after, unit.id).every((id) =>
+                        lessonComplete(after, id),
+                      );
+                      const beforeUnitDone = lessonsForUnit(before, unit.id).every((id) =>
+                        lessonComplete(before, id),
+                      );
+                      if (unitDone && !beforeUnitDone) unitCompleted(unit.id, unit.title, lesson.id);
+                      const allDone = COURSE_LESSONS.every((c) =>
+                        lessonComplete(after, c.lesson.id),
+                      );
+                      if (allDone) courseCompleted(COURSE_LESSONS.length);
                     }}
                   />
                 );

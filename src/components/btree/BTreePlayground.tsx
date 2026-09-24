@@ -18,6 +18,7 @@ import {
 } from "@/lib/engine/btree";
 import BTreeCanvas, { stepAccent } from "@/components/btree/BTreeCanvas";
 import BTreeControls from "@/components/btree/BTreeControls";
+import { labOpened } from "@/lib/dblearnlytics";
 
 const BASE_MS = 620;
 
@@ -154,6 +155,10 @@ export default function BTreePlayground() {
       return !p;
     });
   }, [playIndex, steps.length]);
+
+  useEffect(() => {
+    labOpened("btree");
+  }, []);
 
   useEffect(() => {
     if (!playing) return;

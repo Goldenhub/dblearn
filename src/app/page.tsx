@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { UNITS } from "@/lib/lessons/curriculum";
+import TrackedCta from "@/components/layout/TrackedCta";
 
 export const metadata: Metadata = {
   title: "dblearn — database engine playground",
@@ -64,18 +64,22 @@ export default function Home() {
         </p>
 
         <div className="mt-8 flex flex-wrap items-center gap-3">
-          <Link
+          <TrackedCta
             href="/learn"
+            label="Start lesson one"
+            location="hero"
             className="rounded-lg bg-emerald-600 px-5 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
           >
             Start lesson one
-          </Link>
-          <a
+          </TrackedCta>
+          <TrackedCta
             href="#how-it-works"
+            label="How it works"
+            location="hero"
             className="rounded-lg border border-zinc-800 bg-zinc-900 px-5 py-2.5 text-sm font-semibold text-zinc-300 transition-colors hover:border-zinc-700 hover:text-zinc-50"
           >
             How it works
-          </a>
+          </TrackedCta>
         </div>
 
         <dl className="mt-14 grid grid-cols-2 gap-px overflow-hidden rounded-xl border border-zinc-800 bg-zinc-800 text-center sm:grid-cols-4">
@@ -97,9 +101,11 @@ export default function Home() {
         </h2>
         <div className="mt-4 grid gap-4">
           {MODULES.map((m) => (
-            <Link
+            <TrackedCta
               key={m.href}
               href={m.href}
+              label={m.title}
+              location="module_card"
               className="group flex items-start gap-4 rounded-xl border border-zinc-800 bg-zinc-900 p-5 transition-colors hover:border-zinc-700 hover:bg-zinc-800"
             >
               <span className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${m.dot}`} />
@@ -114,7 +120,7 @@ export default function Home() {
                   {m.blurb}
                 </span>
               </span>
-            </Link>
+            </TrackedCta>
           ))}
         </div>
 
@@ -160,12 +166,14 @@ export default function Home() {
           <p className="mt-2 text-sm text-zinc-400">
             No installs, no credits, no servers. Just you and an engine in a browser tab.
           </p>
-          <Link
+          <TrackedCta
             href="/learn"
+            label="Begin the course"
+            location="footer"
             className="mt-5 inline-block rounded-lg bg-emerald-600 px-6 py-2.5 text-sm font-semibold text-white transition-colors hover:bg-emerald-500"
           >
             Begin the course
-          </Link>
+          </TrackedCta>
         </div>
 
         <p className="mt-10 text-center font-mono text-xs text-zinc-500">

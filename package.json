@@ -13,9 +13,11 @@
     "@dagrejs/dagre": "^1.1.8",
     "@duckdb/duckdb-wasm": "^1.32.0",
     "@monaco-editor/react": "^4.7.0",
+    "@posthog/react": "~1.9.0",
     "@xyflow/react": "^12.11.6",
     "monaco-editor": "^0.56.0",
     "next": "16.3.5",
+    "posthog-js": "~1.372.10",
     "react": "19.2.8",
     "react-dom": "19.2.8"
   },

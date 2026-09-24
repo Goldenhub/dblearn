@@ -7,7 +7,7 @@
  * red ⚠ — or collapse into lock waits, range locks and full serializability.
  */
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ConcurrencySim,
   SCENARIOS,
@@ -16,6 +16,7 @@ import {
   type ClientId,
   type IsolationLevel,
 } from "@/lib/engine/concurrency";
+import { labOpened, scenarioRun } from "@/lib/dblearnlytics";
 import TimelineGrid from "./TimelineGrid";
 import LockMonitor from "./LockMonitor";
 
@@ -86,6 +87,19 @@ export default function ConcurrencyPlayground() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [steps.length]);
+
+  const firstScenarioRef = useRef(true);
+  useEffect(() => {
+    labOpened("isolation");
+  }, []);
+
+  useEffect(() => {
+    if (firstScenarioRef.current) {
+      firstScenarioRef.current = false;
+      return;
+    }
+    scenarioRun(scenarioId);
+  }, [scenarioId]);
 
   const rule = (s: ClientId) =>
     s === "A" ? "border-sky-500" : s === "B" ? "border-violet-500" : "border-emerald-500";

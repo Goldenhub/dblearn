@@ -5,6 +5,7 @@ import dynamic from "next/dynamic";
 
 import { PlanGraph } from "@/components/plan-graph";
 import { explainSql, initEngine, onEngineStatusChange } from "@/lib/duckdb/client";
+import { captureException, labOpened, queryError, queryRun } from "@/lib/dblearnlytics";
 import { useTheme } from "@/lib/theme";
 import type { DuckDBExplainResult, EngineStatus } from "@/lib/duckdb/protocol";
 
@@ -49,6 +50,10 @@ export default function PlanLab() {
     return unsubscribe;
   }, []);
 
+  useEffect(() => {
+    labOpened("plan");
+  }, []);
+
   async function runQuery() {
     if (running || !sql.trim()) return;
     setRunning(true);
@@ -60,8 +65,12 @@ export default function PlanLab() {
       const wallMs = Math.round((performance.now() - t0) * 100) / 100;
       setResult(explained);
       setWallTimeMs(wallMs);
+      queryRun("plan_lab", wallMs);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : String(cause));
+      const message = cause instanceof Error ? cause.message : String(cause);
+      setError(message);
+      queryError("plan_lab", message);
+      captureException(cause);
     } finally {
       setRunning(false);
     }

@@ -13,6 +13,17 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import dynamic from "next/dynamic";
 
 import { CHALLENGES, CATEGORY_LABEL, challengeFor } from "@/lib/challenges/catalog";
+import { COURSE_LESSONS } from "@/lib/lessons/curriculum";
+import {
+  challengeAttempt,
+  challengeCompleted,
+  challengeStarted,
+  captureException,
+  courseCompleted,
+  hintRevealed,
+  queryError,
+  unitCompleted,
+} from "@/lib/dblearnlytics";
 import {
   evaluateChallenge,
   DIRTY_READ_EVENTS,
@@ -32,6 +43,9 @@ import { useTheme } from "@/lib/theme";
 import {
   badgesFor,
   completedCount,
+  getProgress,
+  lessonCompleted,
+  lessonsForUnit,
   recordChallenge,
   totalStars,
   useProgress,
@@ -138,6 +152,15 @@ export default function ChallengeWorkspace({
 
   const effSimIdx = sim ? Math.min(simIdx, sim.steps.length - 1) : 0;
 
+  // Analytics: challenge open + hint reveals.
+  useEffect(() => {
+    challengeStarted(challenge.id, challenge.title);
+  }, [challenge]);
+
+  useEffect(() => {
+    if (revealedHints.size > 0) hintRevealed(challenge.id, revealedHints.size);
+  }, [revealedHints, challenge]);
+
   // Live "what does this query do to the database" for the plan/btree capstones.
   const sqlCatalog = useMemo<CatalogTable[] | null>(() => {
     if (challenge.category !== "plan" && challenge.category !== "btree") return null;
@@ -199,6 +222,7 @@ export default function ChallengeWorkspace({
         submission,
         { attempts: nextAttempt, hintsUsed: revealedHints.size },
       );
+      challengeAttempt(challenge.id, result.passed, nextAttempt);
       if (result.passed) {
         recordChallenge(challenge.id, {
           completedAt: Date.now(),
@@ -208,10 +232,30 @@ export default function ChallengeWorkspace({
           attempts: result.attempts,
           hintsUsed: result.hintsUsed,
         });
+        challengeCompleted(challenge.id, result.stars, result.efficiency);
+        const after = getProgress();
+        const isCourseLessonDone = (id: string) => {
+          const entry = COURSE_LESSONS.find((c) => c.lesson.id === id);
+          if (!entry) return false;
+          const cap = entry.lesson.blocks.find((b) => b.kind === "capstone");
+          return cap ? Boolean(after.challenges[cap.challengeId]) : lessonCompleted(after, id);
+        };
+        const courseEntry = COURSE_LESSONS.find((c) =>
+          c.lesson.blocks.some((b) => b.kind === "capstone" && b.challengeId === challenge.id),
+        );
+        if (courseEntry && lessonsForUnit(after, courseEntry.unit.id).every(isCourseLessonDone)) {
+          unitCompleted(courseEntry.unit.id, courseEntry.unit.title, challenge.id);
+        }
+        if (COURSE_LESSONS.map((c) => c.lesson.id).every(isCourseLessonDone)) {
+          courseCompleted(COURSE_LESSONS.length);
+        }
       }
       setEval(result);
     } catch (cause) {
-      setRunError(cause instanceof Error ? cause.message : String(cause));
+      const message = cause instanceof Error ? cause.message : String(cause);
+      setRunError(message);
+      queryError("challenge", message);
+      captureException(cause);
     } finally {
       setBusy(false);
     }

@@ -9,7 +9,7 @@ A zero-latency, browser-native playground that teaches database internals visual
 - **B-Tree Index** — insert, delete, and look up keys in a real B-Tree. Watch node splits, pointer hops, and a side-by-side `O(log N)` vs `O(N)` proof.
 - **Isolation & locking** — simulate concurrent transactions under 2PL and four isolation levels; load Dirty Read, Non-Repeatable Read, Phantom Read, and Deadlock scenarios and watch lock queues, wait-for graphs, and anomalies.
 - **Challenges** — five production incidents (missing index, N+1, dirty read, buffer thrash, deadlock) driven by a static cost/efficiency evaluator.
-- **Offline-ready PWA** — installable with a custom install prompt, light/dark theme, no external assets or network calls.
+- **Offline-ready PWA** — installable with a custom install prompt, light/dark theme, no external assets. (PostHog analytics is the one deliberate network exception — see below.)
 
 ## Tech stack
 
@@ -100,6 +100,16 @@ Challenge grading is a closed-form cost model over the query text — it **never
 - `public/sw.js` — versioned precache (`dblearn-v2`), cache-first for hashed static assets, network-first navigations with offline fallback. Bump `VERSION` when releasing.
 - Custom install prompt in the header: native `beforeinstallprompt` where supported, iOS "Add to Home Screen" instructions otherwise.
 - Fully offline after first visit; Monaco, DuckDB, React Flow — all local.
+
+## Analytics (PostHog)
+
+The one deliberate exception to the offline-first rule: product analytics via PostHog, mirroring the integration used in the Mongeesy app. Same PostHog project/token as that app; every event carries a literal `app: "dblearn"` property and dblearn runs its own `persistence_name` namespace, so dblearn and Mongeesy events stay separable in the dashboard (filter/breakdown by the `app` property).
+
+- `src/lib/dblearnlytics.ts` — SDK init (same-origin `/tt` proxy, `capture_pageview: false`, autocapture/surveys off) plus typed event helpers and an offline queue (localStorage, max 500, flushed on `online`) so PWA use still captures.
+- `src/components/layout/AnalyticsProvider.tsx` — module-scoped init + `PostHogProvider`/`PostHogErrorBoundary` in the root layout; captures `$pageview` on every route change.
+- `next.config.ts` rewrites `/tt/:path*` → `NEXT_PUBLIC_POSTHOG_HOST` (requires `next start`/Vercel; not available for static export).
+- Enable by setting `NEXT_PUBLIC_POSTHOG_KEY` (and optionally `NEXT_PUBLIC_POSTHOG_HOST`) in `.env` (see `.env.example`). The module no-ops entirely when the key is unset or doesn't start with `phc_`.
+- Tracked events: `$pageview`, `cta_clicked`, `lab_opened`, `lesson_started`, `lesson_completed`, `unit_completed`, `course_completed`, `query_run`, `query_error`, `challenge_started`, `challenge_attempt`, `challenge_completed`, `hint_revealed`, `scenario_run`, plus `$exception` via `captureException`.
 
 ## Theming
 

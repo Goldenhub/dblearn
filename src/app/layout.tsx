@@ -6,6 +6,7 @@ import "./globals.css";
 
 import { ThemeProvider } from "@/lib/theme";
 import AppHeader from "@/components/layout/AppHeader";
+import { AnalyticsProvider } from "@/components/layout/AnalyticsProvider";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -66,8 +67,10 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
         suppressHydrationWarning
       >
         <ThemeProvider>
-          <AppHeader />
-          {children}
+          <AnalyticsProvider>
+            <AppHeader />
+            {children}
+          </AnalyticsProvider>
         </ThemeProvider>
         <Script
           id="sw-register"

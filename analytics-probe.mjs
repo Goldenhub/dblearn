@@ -47,8 +47,15 @@ function parseText(text) {
   try {
     const parsed = JSON.parse(text);
     const list = Array.isArray(parsed) ? parsed : parsed.batch ?? [];
-    for (const item of list ?? []) pushEvent(item);
-    return list.length > 0;
+    if (list.length > 0) {
+      for (const item of list) pushEvent(item);
+      return true;
+    }
+    if (parsed && typeof parsed === "object" && parsed.event) {
+      pushEvent(parsed);
+      return true;
+    }
+    return false;
   } catch {
     return false;
   }
@@ -124,6 +131,10 @@ await page.waitForTimeout(1500);
 // the lesson and lesson_started before asserting.
 await page.waitForTimeout(3500);
 
+// pagehide path: closing the lesson page emits a final $pageleave via beacon.
+await page.evaluate(() => window.dispatchEvent(new Event("pagehide")));
+await page.waitForTimeout(1000);
+
 check(seen("$pageview").length >= 3, "$pageview fired on landing, /learn, and lesson open");
 check(
   seen("$pageview").length > 0 && seen("$pageview").every((e) => e.properties.app === "dblearn"),
@@ -142,6 +153,33 @@ check(
 check(seen("lesson_started").length > 0, "lesson_started fires on lesson open");
 const ls = seen("lesson_started")[0]?.properties ?? {};
 console.log(`  lesson_started ${ls.lesson_id} / unit=${ls.lesson_unit}`);
+check(seen("$pageleave").length >= 2, "$pageleave fires per route change (landing + /learn)");
+check(
+  seen("$pageleave").length > 0 &&
+    seen("$pageleave").every((e) => e.properties.app === "dblearn" && typeof e.properties.duration_ms === "number"),
+  "every $pageleave carries app=dblearn and duration_ms",
+);
+check(
+  seen("$pageleave").some((e) => e.properties.$current_url === BASE + "/"),
+  "$pageleave reports the previous page URL (landing)",
+);
+check(
+  seen("$pageleave").every((pl) =>
+    seen("$pageview").some(
+      (pv) => pv.properties.$current_url === pl.properties.$current_url && pv.properties.$pageview_id === pl.properties.$pageview_id,
+    ),
+  ),
+  "$pageleave pairs with the matching $pageview via $pageview_id",
+);
+check(
+  seen("$pageleave").some((e) => /^\/learn\/[a-z0-9-]+$/.test(new URL(e.properties.$current_url).pathname)),
+  "$pageleave fires on pagehide for the closing page",
+);
+console.log(
+  `  pageleaves: ${seen("$pageleave")
+    .map((e) => `${e.properties.$current_url} ${e.properties.duration_ms}ms`)
+    .join(" | ")}`,
+);
 console.log(`  events observed: ${[...new Set(events.map((e) => e.event))].join(", ") || "(none)"}`);
 check(consoleErrors.length === 0, `zero console errors (${consoleErrors.length})`);
 if (consoleErrors.length) console.log(consoleErrors.slice(0, 5));

@@ -83,6 +83,28 @@ export function capturePageview(): void {
   capture("$pageview");
 }
 
+/**
+ * Fire a `$pageleave` for the page being left. The SDK only emits pageleave on
+ * `pagehide` (tab close/hide) and only when its own `capture_pageview` is
+ * enabled — which ours is not (we capture pageviews manually to keep the `app`
+ * tag). So we emit per-route pageleaves ourselves, *before* the next route's
+ * `$pageview`, which lets the SDK's pageViewManager attach the matching
+ * `$pageview_id`/`$prev_pageview_id`. `previousUrl` is the URL of the page
+ * being left (the browser location has already moved on by the time this runs);
+ * `durationMs` is our own dwell time since that page's `$pageview` (the SDK's
+ * `$duration` is dead in this build).
+ */
+export function capturePageLeave(previousUrl: string, durationMs: number, immediate = false): void {
+  if (!ENABLED) return;
+  const properties = { $current_url: previousUrl, duration_ms: Math.max(0, Math.round(durationMs)) };
+  if (immediate && navigator.onLine) {
+    // The document is unloading — bypass the batch queue and send via beacon.
+    posthog.capture("$pageleave", { app: APP_TAG, ...properties }, { transport: "sendBeacon", send_instantly: true });
+    return;
+  }
+  capture("$pageleave", properties);
+}
+
 export function ctaClicked(label: string, location: string): void {
   if (!ENABLED) return;
   capture("cta_clicked", { cta_label: label, cta_location: location });
